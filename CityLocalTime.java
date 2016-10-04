@@ -42,7 +42,7 @@ class CityLocalTime {
 		do {
 			HashMap<String, Boolean> properties = applicationProperties();
 			String[] cities = requestCities(userInput);
-			String[][] output = new String[cities.length][ATTRIBUTES];
+			String[][] outputGrid = new String[cities.length][ATTRIBUTES];
 
 			// BUILD DATE FORMATTER
 			DateTimeFormatter dateFormatter = buildDateFormat(properties);
@@ -55,27 +55,23 @@ class CityLocalTime {
 				String timeZoneID = getTimeZone(city);
 				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID));
 				city = getFullIdentity(city);
-				// DateTimeFormatter dateFormatter = DateTimeFormat.forPattern("EEEE, MMMM dd, yyyy");
-				DateTimeFormatter time12Formatter = DateTimeFormat.forPattern("hh:mm:ss a");
-				DateTimeFormatter time24Formatter = DateTimeFormat.forPattern("kk:mm:ss");
-				System.out.println(city + " | " + timeZoneID + " | " + dateFormatter.print(cityDateTime) + " | " + time12Formatter.print(cityDateTime) + " | " + time24Formatter.print(cityDateTime));
-				output[idx][LOCATION] = city;
-				output[idx][TIMEZONE] = timeZoneID;
-				output[idx][DATE] = dateFormatter.print(cityDateTime);
-				output[idx++][TIME] = timeFormatter.print(cityDateTime);
-				// FUNCTION PRINT THE TIME OF THE CITY
+
+				outputGrid[idx][LOCATION] = city;
+				outputGrid[idx][TIMEZONE] = timeZoneID;
+				outputGrid[idx][DATE] = dateFormatter.print(cityDateTime);
+				outputGrid[idx++][TIME] = timeFormatter.print(cityDateTime);
+				System.out.print("*");
 			}
 			System.out.println();
 
-
 			if (properties.get("sort")) {
-				Arrays.sort(output, new java.util.Comparator<String[]>() {
+				Arrays.sort(outputGrid, new java.util.Comparator<String[]>() {
 					public int compare(String[] a, String[] b) {
 						return a[0].compareTo(b[0]);
 					}
 				});
 			}
-			for (String[] city : output) {
+			for (String[] city : outputGrid) {
 				System.out.print("| ");
 				if (properties.get("location")) System.out.print(city[LOCATION] + " | ");
 				if (properties.get("timezone")) System.out.print(city[TIMEZONE] + " | ");
@@ -83,6 +79,8 @@ class CityLocalTime {
 				if (properties.get("time")) System.out.print(city[TIME] + " | ");
 				System.out.println();
 			}
+
+			System.out.println();
 		} while (requestRepeatProgram(userInput));
 		userInput.close();
 	}

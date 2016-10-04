@@ -1,0 +1,17 @@
+# Table Formats
+location,TRUE
+timzezone_id,TRUE
+date,TRUE
+time,TRUE
+pretty,FALSE
+sort,TRUE
+
+# Time Formats
+24hour,FALSE
+seconds,TRUE
+
+# Date Formats
+weekday,TRUE
+full_weekday,TRUE
+full_month,TRUE
+full_year,TRUE

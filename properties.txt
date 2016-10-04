@@ -1,13 +1,13 @@
 # Table Formats
 location,TRUE
-timzezone_id,TRUE
-date,TRUE
+timezone,FALSE
+date,FALSE
 time,TRUE
 pretty,FALSE
 sort,TRUE
 
 # Time Formats
-24hour,FALSE
+24hour,TRUE
 seconds,TRUE
 
 # Date Formats

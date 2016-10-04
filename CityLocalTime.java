@@ -44,23 +44,29 @@ class CityLocalTime {
 			String[] cities = requestCities(userInput);
 			String[][] output = new String[cities.length][ATTRIBUTES];
 
+			// BUILD DATE FORMATTER
+			DateTimeFormatter dateFormatter = buildDateFormat(properties);
+			// BUILD TIME FORMATTER
+			DateTimeFormatter timeFormatter = buildTimeFormat(properties);
+
 			System.out.println();
 			int idx = 0;
 			for (String city : cities) {
 				String timeZoneID = getTimeZone(city);
 				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID));
 				city = getFullIdentity(city);
-				DateTimeFormatter dateFormatter = DateTimeFormat.forPattern("EEEE, MMMM dd, yyyy");
+				// DateTimeFormatter dateFormatter = DateTimeFormat.forPattern("EEEE, MMMM dd, yyyy");
 				DateTimeFormatter time12Formatter = DateTimeFormat.forPattern("hh:mm:ss a");
 				DateTimeFormatter time24Formatter = DateTimeFormat.forPattern("kk:mm:ss");
 				System.out.println(city + " | " + timeZoneID + " | " + dateFormatter.print(cityDateTime) + " | " + time12Formatter.print(cityDateTime) + " | " + time24Formatter.print(cityDateTime));
 				output[idx][LOCATION] = city;
 				output[idx][TIMEZONE] = timeZoneID;
 				output[idx][DATE] = dateFormatter.print(cityDateTime);
-				output[idx++][TIME] = time12Formatter.print(cityDateTime);
+				output[idx++][TIME] = timeFormatter.print(cityDateTime);
 				// FUNCTION PRINT THE TIME OF THE CITY
 			}
 			System.out.println();
+
 
 			if (properties.get("sort")) {
 				Arrays.sort(output, new java.util.Comparator<String[]>() {
@@ -71,9 +77,10 @@ class CityLocalTime {
 			}
 			for (String[] city : output) {
 				System.out.print("| ");
-				for (String attribute : city) {
-					System.out.print(attribute + " | ");
-				}
+				if (properties.get("location")) System.out.print(city[LOCATION] + " | ");
+				if (properties.get("timezone")) System.out.print(city[TIMEZONE] + " | ");
+				if (properties.get("date")) System.out.print(city[DATE] + " | ");
+				if (properties.get("time")) System.out.print(city[TIME] + " | ");
 				System.out.println();
 			}
 		} while (requestRepeatProgram(userInput));
@@ -152,6 +159,30 @@ class CityLocalTime {
 			// System.err.println(e.getMessage());
 			return "Not Found";
 		}
+	}
+
+	static private DateTimeFormatter buildDateFormat (HashMap<String, Boolean> properties) {
+		String dateFormat = "";
+
+		if (properties.get("weekday")) {
+			dateFormat += properties.get("full_weekday") ? "EEEE" : "EE";
+			dateFormat += ", ";
+		}
+		dateFormat += properties.get("full_month") ? "MMMM " : "MM/";
+		dateFormat += properties.get("full_month") ? "dd, " : "dd/";
+		dateFormat += properties.get("full_year") ? "yyyy" : "yy";
+
+		return DateTimeFormat.forPattern(dateFormat);
+	}
+
+	static private DateTimeFormatter buildTimeFormat (HashMap<String, Boolean> properties) {
+		String timeFormat = "";
+
+		timeFormat += properties.get("24hour") ? "kk:mm" : "hh:mm";
+		timeFormat += properties.get("seconds") ? ":ss" : "";
+		timeFormat += properties.get("24hour") ? "" : " a";
+
+		return DateTimeFormat.forPattern(timeFormat);
 	}
 
 	static private boolean requestRepeatProgram(Scanner userInput) {

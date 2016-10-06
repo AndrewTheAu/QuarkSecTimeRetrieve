@@ -1,13 +1,18 @@
 # Table Formats
 location,TRUE
 timezone,FALSE
-date,FALSE
+date,TRUE
 time,TRUE
-pretty,FALSE
+pretty,TRUE
 sort,TRUE
 
+# Location Formats
+city,TRUE
+province,TRUE
+country,TRUE
+
 # Time Formats
-24hour,TRUE
+24hour,FALSE
 seconds,TRUE
 
 # Date Formats

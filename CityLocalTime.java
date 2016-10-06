@@ -15,39 +15,36 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 class CityLocalTime {
+	// Consider making this into ENUM
 	private static final int ATTRIBUTES = 4;
 	private static final int LOCATION = 0;
 	private static final int TIMEZONE = 1;
 	private static final int DATE = 2;
 	private static final int TIME = 3;
 
-
-	private static final int TIMEZONE_PADDING = 25;
-	private static final int LOCATION_PADDING = 50;
-	
-	private static final int HOUR_PADDING = 2;
-	private static final int MINUTES_PADDING = 2;
-	private static final int SECONDS_PADDING = 2;
-
-	private static final int DAY_PADDING = 11;
-	private static final int MONTH_PADDING = 9;
-	private static final int DATE_PADDING = 2;
-	private static final int YEAR_PADDING = 4;
-
-	private static final int DELIMIT_PADDING = 5;
+	private static final int CITY = 0;
+	private static final int REGION = 1;
+	private static final int COUNTRY = 2;	
 
 	public static void main(String args[]) {
 		Scanner userInput = new Scanner(System.in);
 
 		do {
+			// Properties of what the application prints
 			HashMap<String, Boolean> properties = applicationProperties();
+			// Cities to get information about
 			String[] cities = requestCities(userInput);
-			String[][] outputGrid = new String[cities.length][ATTRIBUTES];
+			String progressBar = "";
+			for (String city : cities) {
+				progressBar += "-";
+			}
 
 			// BUILD DATE FORMATTER
 			DateTimeFormatter dateFormatter = buildDateFormat(properties);
 			// BUILD TIME FORMATTER
 			DateTimeFormatter timeFormatter = buildTimeFormat(properties);
+			// Information about each city
+			String[][] outputGrid = new String[cities.length][ATTRIBUTES];
 
 			System.out.println();
 			int idx = 0;
@@ -56,12 +53,14 @@ class CityLocalTime {
 				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID));
 				city = getFullIdentity(city);
 
-				outputGrid[idx][LOCATION] = city;
+				outputGrid[idx][LOCATION] = city; // cityFormatter.print(city);
 				outputGrid[idx][TIMEZONE] = timeZoneID;
 				outputGrid[idx][DATE] = dateFormatter.print(cityDateTime);
 				outputGrid[idx++][TIME] = timeFormatter.print(cityDateTime);
-				System.out.print("*");
+				progressBar = updateProgress(city, progressBar);
 			}
+			outputGrid = properties.get("pretty") ? prettyFormat(outputGrid) : outputGrid;
+			System.out.println();
 			System.out.println();
 
 			if (properties.get("sort")) {
@@ -73,10 +72,10 @@ class CityLocalTime {
 			}
 			for (String[] city : outputGrid) {
 				System.out.print("| ");
-				if (properties.get("location")) System.out.print(city[LOCATION] + " | ");
-				if (properties.get("timezone")) System.out.print(city[TIMEZONE] + " | ");
-				if (properties.get("date")) System.out.print(city[DATE] + " | ");
-				if (properties.get("time")) System.out.print(city[TIME] + " | ");
+				if(properties.get("location")) System.out.print(city[LOCATION] + " | ");
+				if(properties.get("timezone")) System.out.print(city[TIMEZONE] + " | ");
+				if(properties.get("date")) System.out.print(city[DATE] + " | ");
+				if(properties.get("time")) System.out.print(city[TIME] + " | ");
 				System.out.println();
 			}
 
@@ -84,7 +83,7 @@ class CityLocalTime {
 		} while (requestRepeatProgram(userInput));
 		userInput.close();
 	}
-
+	
 	public static HashMap<String, Boolean> applicationProperties() {
 		HashMap<String, Boolean> properties = new HashMap<String, Boolean>();
 		try {
@@ -113,7 +112,7 @@ class CityLocalTime {
 		return properties;
 	}
 
-	static private String[] requestCities (Scanner userInput) {
+	static private String[] requestCities(Scanner userInput) {
 		String[] cities;
 
 		System.out.println(
@@ -154,12 +153,38 @@ class CityLocalTime {
 			
 			return timeZoneMatch.group(0);
 		} catch (Exception e) {
-			// System.err.println(e.getMessage());
+			System.err.println(e.getMessage());
 			return "Not Found";
 		}
 	}
 
-	static private DateTimeFormatter buildDateFormat (HashMap<String, Boolean> properties) {
+	static private String[][] prettyFormat (String[][] outputGrid) {
+		int[] maxLength = new int[ATTRIBUTES];
+		int[] padding = new int[ATTRIBUTES];
+		int idx = 0;
+
+		for (String[] city : outputGrid) {
+			maxLength[LOCATION] = city[LOCATION].length() > maxLength[LOCATION] ? city[LOCATION].length() : maxLength[LOCATION];
+			maxLength[TIMEZONE] = city[TIMEZONE].length() > maxLength[TIMEZONE] ? city[TIMEZONE].length() : maxLength[TIMEZONE];
+			maxLength[DATE] = city[DATE].length() > maxLength[DATE] ? city[DATE].length() : maxLength[DATE];
+			maxLength[TIME] = city[TIME].length() > maxLength[TIME] ? city[TIME].length() : maxLength[TIME];
+		}
+
+		for (int pad : maxLength) {
+			padding[idx++] = 0 - pad;
+		}
+
+		for (idx = 0 ; idx < outputGrid.length ; idx++) {
+			outputGrid[idx][LOCATION] = String.format("%" + padding[LOCATION] + "s", outputGrid[idx][LOCATION]);
+			outputGrid[idx][TIMEZONE] = String.format("%" + padding[TIMEZONE] + "s", outputGrid[idx][TIMEZONE]);
+			outputGrid[idx][DATE] = String.format("%" + padding[DATE] + "s", outputGrid[idx][DATE]);
+			outputGrid[idx][TIME] = String.format("%" + padding[TIME] + "s", outputGrid[idx][TIME]);
+		}
+
+		return outputGrid;
+	}
+
+	static private DateTimeFormatter buildDateFormat(HashMap<String, Boolean> properties) {
 		String dateFormat = "";
 
 		if (properties.get("weekday")) {
@@ -173,7 +198,7 @@ class CityLocalTime {
 		return DateTimeFormat.forPattern(dateFormat);
 	}
 
-	static private DateTimeFormatter buildTimeFormat (HashMap<String, Boolean> properties) {
+	static private DateTimeFormatter buildTimeFormat(HashMap<String, Boolean> properties) {
 		String timeFormat = "";
 
 		timeFormat += properties.get("24hour") ? "kk:mm" : "hh:mm";
@@ -197,6 +222,24 @@ class CityLocalTime {
 					System.out.print("Please enter Y or n: ");
 			}
 		}
+	}
+
+	static private String updateProgress(String city, String progressBar) {
+		float total = progressBar.length();
+		progressBar = progressBar.replaceFirst("-", Character.toString((char)0x2588));
+
+		float current = 0;
+		for (char block : progressBar.toCharArray()) {
+			if (block == (char)0x2588) current++;
+		}
+
+		System.out.print(
+				(current/total*100 != 100 ? String.format("Processing: %-50s ", city) : String.format("%-63s", "Process Complete: ")) + 
+				progressBar + "\t\t" + 
+				current/total*100 + "%\r"
+		);
+
+		return progressBar;
 	}
 
 }

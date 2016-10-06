@@ -50,7 +50,7 @@ class CityLocalTime {
 			int idx = 0;
 			for (String city : cities) {
 				String timeZoneID = getTimeZone(city);
-				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID));
+				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID)); // Move this and rest of for loop into a function
 				city = getFullIdentity(city);
 
 				outputGrid[idx][LOCATION] = city; // cityFormatter.print(city);

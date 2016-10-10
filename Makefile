@@ -1,5 +1,6 @@
 JFLAGS = -g -Xlint:unchecked
 JARFLAGS = -cp .:jsoup-1.9.2.jar:joda-time-2.9.4.jar
+# ARFLAGS = -cp ".:./JarFiles/jsoup-1.9.2.jar:./JarFiles/joda-time-2.9.4.jar"
 JC = javac
 JR = java
 

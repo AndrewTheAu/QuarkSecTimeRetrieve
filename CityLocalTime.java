@@ -34,6 +34,8 @@ class CityLocalTime {
 			HashMap<String, Boolean> properties = applicationProperties();
 			// Cities to get information about
 			String[] cities = requestCities(userInput);
+
+			// Initiate empty progress bar
 			String progressBar = "";
 			for (String city : cities) {
 				progressBar += "-";

@@ -1,10 +1,10 @@
 # Table Formats
+pretty,FALSE
+sort,FALSE
 location,TRUE
 timezone,FALSE
 date,TRUE
 time,TRUE
-pretty,TRUE
-sort,TRUE
 
 # Location Formats
 city,TRUE

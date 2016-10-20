@@ -1,22 +1,23 @@
 # Table Formats
-pretty,FALSE
-sort,FALSE
-location,TRUE
-timezone,FALSE
-date,TRUE
-time,TRUE
+unfound:TRUE
+pretty:TRUE
+sort:TRUE
+location:TRUE
+timezone:FALSE
+date:TRUE
+time:TRUE
 
 # Location Formats
-city,TRUE
-province,TRUE
-country,TRUE
+city:TRUE
+province:TRUE
+country:TRUE
 
 # Time Formats
-24hour,FALSE
-seconds,TRUE
+24hour:FALSE
+seconds:TRUE
 
 # Date Formats
-weekday,TRUE
-full_weekday,TRUE
-full_month,TRUE
-full_year,TRUE
+weekday:TRUE
+full_weekday:TRUE
+full_month:TRUE
+full_year:TRUE

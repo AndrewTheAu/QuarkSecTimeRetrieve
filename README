@@ -28,7 +28,7 @@ This file will change what the application displays and how it displays informat
 # input.txt
 Used in conjuntion with "make test" which will redirect input.txt input the standard input stream. This file is used to automatically retrieve the times of cities within that are separated by "|". Currently there is a bug which causes a NoSuchElementException to be thrown, this is likely because of how scanner is used, currently have not found a solution
 
-# MAKEFILE
+# MAKEFILE COMPILE/RUN
 Compile: make
 Run: make run
 Run Tests: make test

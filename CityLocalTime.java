@@ -1,6 +1,6 @@
 import java.util.*;
 import java.util.regex.*;
-import java.io.File;
+import java.io.*;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormatter;
@@ -28,56 +28,82 @@ class CityLocalTime {
 
 	public static void main(String args[]) {
 		Scanner userInput = new Scanner(System.in);
+		// Document retrieved from time.is from cities entered
+		Document cityDoc = null;
+		// Properties of what the application prints
+		Properties properties = applicationProperties();
+		// Cities to get information about
+		List<String> cities = requestCities(userInput);
+		// BUILD DATE FORMATTER
+		DateTimeFormatter dateFormatter = buildDateFormat(properties);
+		// BUILD TIME FORMATTER
+		DateTimeFormatter timeFormatter = buildTimeFormat(properties);
+		// Information about each city
+		List<List<String>> outputGrid = new ArrayList<List<String>>();
+		List<String> unfound = new ArrayList<String>();
 
 		do {
-			// Properties of what the application prints
-			HashMap<String, Boolean> properties = applicationProperties();
-			// Cities to get information about
-			String[] cities = requestCities(userInput);
-
 			// Initiate empty progress bar
 			String progressBar = "";
 			for (String city : cities) {
 				progressBar += "-";
 			}
 
-			// BUILD DATE FORMATTER
-			DateTimeFormatter dateFormatter = buildDateFormat(properties);
-			// BUILD TIME FORMATTER
-			DateTimeFormatter timeFormatter = buildTimeFormat(properties);
-			// Information about each city
-			String[][] outputGrid = new String[cities.length][ATTRIBUTES];
-
 			System.out.println();
-			int idx = 0;
+			List<String> cityProperties = new ArrayList<String>();
 			for (String city : cities) {
-				String timeZoneID = getTimeZone(city);
-				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID)); // Move this and rest of for loop into a function
-				city = getFullIdentity(city);
+				cityProperties.clear();
+				cityDoc = retreiveCityDoc(city);
 
-				outputGrid[idx][LOCATION] = city; // cityFormatter.print(city);
-				outputGrid[idx][TIMEZONE] = timeZoneID;
-				outputGrid[idx][DATE] = dateFormatter.print(cityDateTime);
-				outputGrid[idx++][TIME] = timeFormatter.print(cityDateTime);
+				if (cityDoc == null) {
+					unfound.add(city);
+					progressBar = updateProgress(city, progressBar);
+					continue;
+				}
+
+				String timeZoneID = getTimeZone(cityDoc);
+				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID)); // Move this and rest of for loop into a function
+				city = getFullIdentity(cityDoc);
+
+				cityProperties.add(city); // cityFormatter.print(city);
+				cityProperties.add(timeZoneID);
+				cityProperties.add(dateFormatter.print(cityDateTime));
+				cityProperties.add(timeFormatter.print(cityDateTime));
+				cityProperties.add(updateProgress(city, progressBar));
+
+				outputGrid.add(new ArrayList<String>(cityProperties));
 				progressBar = updateProgress(city, progressBar);
 			}
-			outputGrid = properties.get("pretty") ? prettyFormat(outputGrid) : outputGrid;
 			System.out.println();
 			System.out.println();
 
-			if (properties.get("sort")) {
-				Arrays.sort(outputGrid, new java.util.Comparator<String[]>() {
-					public int compare(String[] a, String[] b) {
-						return a[0].compareTo(b[0]);
+			outputGrid = Boolean.parseBoolean(properties.getProperty("pretty")) ? prettyFormat(outputGrid) : outputGrid;
+
+			if (Boolean.parseBoolean(properties.getProperty("sort"))) {
+				Collections.sort(unfound);
+				Collections.sort(outputGrid, new Comparator<List<String>>() {
+					public int compare(List<String> a, List<String> b) {
+						return (a.get(LOCATION)).compareTo(b.get(LOCATION));
 					}
 				});
 			}
-			for (String[] city : outputGrid) {
-				System.out.print("| ");
-				if(properties.get("location")) System.out.print(city[LOCATION] + " | ");
-				if(properties.get("timezone")) System.out.print(city[TIMEZONE] + " | ");
-				if(properties.get("date")) System.out.print(city[DATE] + " | ");
-				if(properties.get("time")) System.out.print(city[TIME] + " | ");
+
+			if (Boolean.parseBoolean(properties.getProperty("unfound"))) {
+				System.out.println("These cities were not found:");
+
+				for (String city : unfound) {
+					System.out.println("\t- " + city);
+				}
+				System.out.println();
+			}
+
+			System.out.println("City Times:");
+			for (List<String> city : outputGrid) {
+				System.out.print("\t| ");
+				if(Boolean.parseBoolean(properties.getProperty("location"))) System.out.print(city.get(LOCATION) + " | ");
+				if(Boolean.parseBoolean(properties.getProperty("timezone"))) System.out.print(city.get(TIMEZONE) + " | ");
+				if(Boolean.parseBoolean(properties.getProperty("date"))) System.out.print(city.get(DATE) + " | ");
+				if(Boolean.parseBoolean(properties.getProperty("time"))) System.out.print(city.get(TIME) + " | ");
 				System.out.println();
 			}
 
@@ -86,126 +112,115 @@ class CityLocalTime {
 		userInput.close();
 	}
 	
-	public static HashMap<String, Boolean> applicationProperties() {
-		HashMap<String, Boolean> properties = new HashMap<String, Boolean>();
+	public static Properties applicationProperties() {
+		Properties properties = new Properties();
+
 		try {
-			File propertiesFile = new File("./properties.txt");
-			Scanner propertyLine = new Scanner(propertiesFile);
-			String property;
-
-			while (propertyLine.hasNextLine()) {
-				property = propertyLine.nextLine();
-
-				if (!property.isEmpty() && !property.contains("#")) {
-					// System.out.println(property);
-					properties.put(
-							property.substring(0, property.indexOf(",")), 
-							property.substring(property.indexOf(",") + 1).equalsIgnoreCase("TRUE") ?
-									true : false
-					);
-				}
-			}
+			properties.load(new FileInputStream("./properties.txt"));
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}
 
-		// System.out.println(properties);
 		return properties;
 	}
 
-	static private String[] requestCities(Scanner userInput) {
+	static private List<String> requestCities(Scanner userInput) {
 		String[] cities;
 
 		System.out.println(
 				"\nEnter the cities that you would like the time of, " +
 				"separate each city by a '|'.\n" +
-				"If the incorrect city is displayed, try the following format: " +
-				"CITY, STATE/PROVINCE, COUNTRY."
+				"If the incorrect city is displayed, try the following formats:\n" +
+				"CITY, STATE/PROVINCE\n" +
+				"CITY, STATE/PROVINCE, COUNTRY"
 		);
 		cities = userInput.nextLine().split("\\|");
 
-		String[] cleaned_cities = new String[cities.length];
-		int idx = 0;
+		List<String> cleaned_cities = new ArrayList<String>();
 		for (String city : cities) {
-			cleaned_cities[idx++] = city.trim();
+			cleaned_cities.add(city.trim());
 		}
 
 		return cleaned_cities;
 	}
 
-	static private String getFullIdentity(String city) {
-		try {
-			Document doc = Jsoup.connect("http://www.time.is/" + city).get();
+	static private Document retreiveCityDoc(String city) {
+		if (city.isEmpty()) {
+			return null;
+		}
 
-			return doc.select("#msgdiv").select("h1").text().replace("Time in ", "").replace(" now", "");
+		try {
+			return Jsoup.connect("http://www.time.is/" + city).get();
 		} catch (Exception e) {
-			// System.err.println(e.getMessage());
-			return city + " was not found";
+			return null;
 		}
 	}
 
-	static private String getTimeZone(String city) {
-		try {
-			Document doc = Jsoup.connect("http://www.time.is/" + city).get();
-			String timeZoneID = doc.select(".infobox").text();
-			Pattern timeZonePattern = Pattern.compile("[\\w]+/[\\w]+(?=\\.)");
-			Matcher timeZoneMatch = timeZonePattern.matcher(timeZoneID);
-			timeZoneMatch.find();
-			
-			return timeZoneMatch.group(0);
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
-			return "Not Found";
-		}
+	static private String getFullIdentity(Document cityDoc) {
+		return cityDoc.select("#msgdiv").select("h1").text().replace("Time in ", "").replace(" now", "");
 	}
 
-	static private String[][] prettyFormat (String[][] outputGrid) {
+	static private String getTimeZone(Document cityDoc) {
+		String timeZoneID = cityDoc.select(".infobox").text();
+		Pattern timeZonePattern = Pattern.compile("[\\w]+/[\\w]+(?=\\.)");
+		Matcher timeZoneMatch = timeZonePattern.matcher(timeZoneID);
+		
+		timeZoneMatch.find();
+		
+		return timeZoneMatch.group(0);
+	}
+
+	static private List<List<String>> prettyFormat (List<List<String>> outputGrid) {
 		int[] maxLength = new int[ATTRIBUTES];
 		int[] padding = new int[ATTRIBUTES];
-		int idx = 0;
 
-		for (String[] city : outputGrid) {
-			maxLength[LOCATION] = city[LOCATION].length() > maxLength[LOCATION] ? city[LOCATION].length() : maxLength[LOCATION];
-			maxLength[TIMEZONE] = city[TIMEZONE].length() > maxLength[TIMEZONE] ? city[TIMEZONE].length() : maxLength[TIMEZONE];
-			maxLength[DATE] = city[DATE].length() > maxLength[DATE] ? city[DATE].length() : maxLength[DATE];
-			maxLength[TIME] = city[TIME].length() > maxLength[TIME] ? city[TIME].length() : maxLength[TIME];
+		for (List<String> city : outputGrid) {
+			maxLength[LOCATION] = city.get(LOCATION).length() > maxLength[LOCATION] ? city.get(LOCATION).length() : maxLength[LOCATION];
+			maxLength[TIMEZONE] = city.get(TIMEZONE).length() > maxLength[TIMEZONE] ? city.get(TIMEZONE).length() : maxLength[TIMEZONE];
+			maxLength[DATE] = city.get(DATE).length() > maxLength[DATE] ? city.get(DATE).length() : maxLength[DATE];
+			maxLength[TIME] = city.get(TIME).length() > maxLength[TIME] ? city.get(TIME).length() : maxLength[TIME];
 		}
 
+		int idx = 0;
 		for (int pad : maxLength) {
 			padding[idx++] = 0 - pad;
 		}
 
-		for (idx = 0 ; idx < outputGrid.length ; idx++) {
-			outputGrid[idx][LOCATION] = String.format("%" + padding[LOCATION] + "s", outputGrid[idx][LOCATION]);
-			outputGrid[idx][TIMEZONE] = String.format("%" + padding[TIMEZONE] + "s", outputGrid[idx][TIMEZONE]);
-			outputGrid[idx][DATE] = String.format("%" + padding[DATE] + "s", outputGrid[idx][DATE]);
-			outputGrid[idx][TIME] = String.format("%" + padding[TIME] + "s", outputGrid[idx][TIME]);
+		List<String> paddedList = new ArrayList<String>();
+		for (idx = 0 ; idx < outputGrid.size() ; idx++) {
+			paddedList.add(String.format("%" + padding[LOCATION] + "s", outputGrid.get(idx).get(LOCATION)));
+			paddedList.add(String.format("%" + padding[TIMEZONE] + "s", outputGrid.get(idx).get(TIMEZONE)));
+			paddedList.add(String.format("%" + padding[DATE] + "s", outputGrid.get(idx).get(DATE)));
+			paddedList.add(String.format("%" + padding[TIME] + "s", outputGrid.get(idx).get(TIME)));
+
+			outputGrid.set(idx, new ArrayList<String>(paddedList));
+			paddedList.clear();
 		}
 
 		return outputGrid;
 	}
 
-	static private DateTimeFormatter buildDateFormat(HashMap<String, Boolean> properties) {
+	static private DateTimeFormatter buildDateFormat(Properties properties) {
 		String dateFormat = "";
 
-		if (properties.get("weekday")) {
-			dateFormat += properties.get("full_weekday") ? "EEEE" : "EE";
+		if (Boolean.parseBoolean(properties.getProperty("weekday"))) {
+			dateFormat += Boolean.parseBoolean(properties.getProperty("full_weekday")) ? "EEEE" : "EE";
 			dateFormat += ", ";
 		}
-		dateFormat += properties.get("full_month") ? "MMMM " : "MM/";
-		dateFormat += properties.get("full_month") ? "dd, " : "dd/";
-		dateFormat += properties.get("full_year") ? "yyyy" : "yy";
+		dateFormat += Boolean.parseBoolean(properties.getProperty("full_month")) ? "MMMM " : "MM/";
+		dateFormat += Boolean.parseBoolean(properties.getProperty("full_month")) ? "dd, " : "dd/";
+		dateFormat += Boolean.parseBoolean(properties.getProperty("full_year")) ? "yyyy" : "yy";
 
 		return DateTimeFormat.forPattern(dateFormat);
 	}
 
-	static private DateTimeFormatter buildTimeFormat(HashMap<String, Boolean> properties) {
+	static private DateTimeFormatter buildTimeFormat(Properties properties) {
 		String timeFormat = "";
 
-		timeFormat += properties.get("24hour") ? "kk:mm" : "hh:mm";
-		timeFormat += properties.get("seconds") ? ":ss" : "";
-		timeFormat += properties.get("24hour") ? "" : " a";
+		timeFormat += Boolean.parseBoolean(properties.getProperty("24hour")) ? "kk:mm" : "hh:mm";
+		timeFormat += Boolean.parseBoolean(properties.getProperty("seconds")) ? ":ss" : "";
+		timeFormat += Boolean.parseBoolean(properties.getProperty("24hour")) ? "" : " a";
 
 		return DateTimeFormat.forPattern(timeFormat);
 	}
@@ -238,7 +253,7 @@ class CityLocalTime {
 		System.out.print(
 				(current/total*100 != 100 ? String.format("Processing: %-50s ", city) : String.format("%-63s", "Process Complete: ")) + 
 				progressBar + "\t\t" + 
-				current/total*100 + "%\r"
+				String.format("%.2f", current/total*100) + "%\r"
 		);
 
 		return progressBar;

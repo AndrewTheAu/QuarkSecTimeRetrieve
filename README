@@ -4,24 +4,25 @@ CityLocalTime is a application where users can retrieve the local time, date of 
 # properties.txt
 This file will change what the application displays and how it displays information to the user. Properties are activated by setting the text after each property to TRUE/true no spaces.
 	Table Formats: Determines what and how information will be displayed once all times are retrieved
+		unfound:				Displays cities that were not found
 		pretty: 				Pad columns so that table is aligned
 		sort: 					Sort the inputted cities so that they are alphebetically displayed 
-		location: 			Display name of the city as well as state/province/country it belongs to
-		timezone: 			Display the timezone id of the city
+		location: 				Display name of the city as well as state/province/country it belongs to
+		timezone: 				Display the timezone id of the city
 		date: 					Displays the current local date of the city
 		time: 					Displays the current local time of the city
 	Location Formats: Determines what is displayed if the location of the city is displayed
 		city: 					Display the city name
-		province: 			Display the state/province of the city (some cities may be affiliated with only a country)
+		province: 				Display the state/province of the city (some cities may be affiliated with only a country)
 		country: 				Display the country of the city
 	Time Formats: Determines what and how the local time of the city is displayed if displayed
 		24hour:					Changes the time displayed to a 24 hour format
 		seconds:				Displays the seconds in the time
 	Date Formats: Determines how local dates of a city are displayed if displayed
 		weekday:				Display the current day of the week of the city
-		full_weekday:		Determines how the weekday is displayed (Tuesday/Tues)
-		full_month:			Determines how the month is displayed (September/Sept)
-		full_year:			Determines how the year is displayed (2015/15)
+		full_weekday:			Determines how the weekday is displayed (Tuesday/Tues)
+		full_month:				Determines how the month is displayed (September/Sept)
+		full_year:				Determines how the year is displayed (2015/15)
 
 
 
@@ -35,7 +36,6 @@ Run Tests: make test
 
 Future Updates:
 Add ability to format the city being displayed (Currently only displays full location)
-Clean up code (especially main())
 Add comments to code
 Make pretty print look like a table
 Move JAR files to their own folder and figure out how to compile with that class path

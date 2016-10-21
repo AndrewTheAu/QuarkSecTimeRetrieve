@@ -28,19 +28,14 @@ class CityLocalTime {
 
 	public static void main(String args[]) {
 		Scanner userInput = new Scanner(System.in);
-		// Document retrieved from time.is from cities entered
-		Document cityDoc = null;
 		// Properties of what the application prints
 		Properties properties = applicationProperties();
 		// Cities to get information about
 		List<String> cities = requestCities(userInput);
-		// BUILD DATE FORMATTER
-		DateTimeFormatter dateFormatter = buildDateFormat(properties);
-		// BUILD TIME FORMATTER
-		DateTimeFormatter timeFormatter = buildTimeFormat(properties);
 		// Information about each city
 		List<List<String>> outputGrid = new ArrayList<List<String>>();
-		List<String> unfound = new ArrayList<String>();
+		// Cities that were not found by time.is
+		List<String> unfoundCities = new ArrayList<String>();
 
 		do {
 			// Initiate empty progress bar
@@ -49,65 +44,9 @@ class CityLocalTime {
 				progressBar += "-";
 			}
 
-			System.out.println();
-			List<String> cityProperties = new ArrayList<String>();
-			for (String city : cities) {
-				cityProperties.clear();
-				cityDoc = retreiveCityDoc(city);
-
-				if (cityDoc == null) {
-					unfound.add(city);
-					progressBar = updateProgress(city, progressBar);
-					continue;
-				}
-
-				String timeZoneID = getTimeZone(cityDoc);
-				DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID)); // Move this and rest of for loop into a function
-				city = getFullIdentity(cityDoc);
-
-				cityProperties.add(city); // cityFormatter.print(city);
-				cityProperties.add(timeZoneID);
-				cityProperties.add(dateFormatter.print(cityDateTime));
-				cityProperties.add(timeFormatter.print(cityDateTime));
-				cityProperties.add(updateProgress(city, progressBar));
-
-				outputGrid.add(new ArrayList<String>(cityProperties));
-				progressBar = updateProgress(city, progressBar);
-			}
-			System.out.println();
-			System.out.println();
-
-			outputGrid = Boolean.parseBoolean(properties.getProperty("pretty")) ? prettyFormat(outputGrid) : outputGrid;
-
-			if (Boolean.parseBoolean(properties.getProperty("sort"))) {
-				Collections.sort(unfound);
-				Collections.sort(outputGrid, new Comparator<List<String>>() {
-					public int compare(List<String> a, List<String> b) {
-						return (a.get(LOCATION)).compareTo(b.get(LOCATION));
-					}
-				});
-			}
-
-			if (Boolean.parseBoolean(properties.getProperty("unfound"))) {
-				System.out.println("These cities were not found:");
-
-				for (String city : unfound) {
-					System.out.println("\t- " + city);
-				}
-				System.out.println();
-			}
-
-			System.out.println("City Times:");
-			for (List<String> city : outputGrid) {
-				System.out.print("\t| ");
-				if(Boolean.parseBoolean(properties.getProperty("location"))) System.out.print(city.get(LOCATION) + " | ");
-				if(Boolean.parseBoolean(properties.getProperty("timezone"))) System.out.print(city.get(TIMEZONE) + " | ");
-				if(Boolean.parseBoolean(properties.getProperty("date"))) System.out.print(city.get(DATE) + " | ");
-				if(Boolean.parseBoolean(properties.getProperty("time"))) System.out.print(city.get(TIME) + " | ");
-				System.out.println();
-			}
-
-			System.out.println();
+			propulateCityData(properties, cities, outputGrid, unfoundCities, progressBar);
+			formatOutput(properties, outputGrid, unfoundCities);
+			displayOutput(properties, outputGrid, unfoundCities);
 		} while (requestRepeatProgram(userInput));
 		userInput.close();
 	}
@@ -136,6 +75,7 @@ class CityLocalTime {
 				"CITY, STATE/PROVINCE, COUNTRY"
 		);
 		cities = userInput.nextLine().split("\\|");
+		System.out.println();
 
 		List<String> cleaned_cities = new ArrayList<String>();
 		for (String city : cities) {
@@ -143,6 +83,43 @@ class CityLocalTime {
 		}
 
 		return cleaned_cities;
+	}
+
+	static private void propulateCityData(Properties properties, List<String> cities, 
+			List<List<String>> outputGrid, List<String> unfoundCities, String progressBar) {
+		// Document retrieved from time.is from cities entered
+		Document cityDoc = null;
+		// Building date format for table
+		DateTimeFormatter dateFormatter = buildDateFormat(properties);
+		// Building time format for table
+		DateTimeFormatter timeFormatter = buildTimeFormat(properties);
+		// Attributes of each city
+		List<String> cityProperties = new ArrayList<String>();
+
+		for (String city : cities) {
+			cityDoc = retreiveCityDoc(city);
+
+			if (cityDoc == null) {
+				unfoundCities.add(city);
+				progressBar = updateProgress(city, progressBar);
+				continue;
+			}
+
+			String timeZoneID = getTimeZone(cityDoc);
+			DateTime cityDateTime = DateTime.now(DateTimeZone.forID(timeZoneID));
+			city = getFullIdentity(cityDoc);
+
+			cityProperties.add(cityFormatter(properties, city));
+			cityProperties.add(timeZoneID);
+			cityProperties.add(dateFormatter.print(cityDateTime));
+			cityProperties.add(timeFormatter.print(cityDateTime));
+			cityProperties.add(updateProgress(city, progressBar));
+
+			outputGrid.add(new ArrayList<String>(cityProperties));
+			progressBar = updateProgress(city, progressBar);
+			cityProperties.clear();
+		}
+		System.out.println("\n");
 	}
 
 	static private Document retreiveCityDoc(String city) {
@@ -165,13 +142,26 @@ class CityLocalTime {
 		String timeZoneID = cityDoc.select(".infobox").text();
 		Pattern timeZonePattern = Pattern.compile("[\\w]+/[\\w]+(?=\\.)");
 		Matcher timeZoneMatch = timeZonePattern.matcher(timeZoneID);
-		
+
 		timeZoneMatch.find();
 		
 		return timeZoneMatch.group(0);
 	}
 
-	static private List<List<String>> prettyFormat (List<List<String>> outputGrid) {
+	static private void formatOutput(Properties properties, List<List<String>> outputGrid, List<String> unfoundCities) {
+		if (Boolean.parseBoolean(properties.getProperty("pretty"))) prettyFormat(outputGrid);
+
+		if (Boolean.parseBoolean(properties.getProperty("sort"))) {
+			Collections.sort(unfoundCities);
+			Collections.sort(outputGrid, new Comparator<List<String>>() {
+				public int compare(List<String> a, List<String> b) {
+					return (a.get(LOCATION)).compareTo(b.get(LOCATION));
+				}
+			});
+		}
+	}
+
+	static private void prettyFormat(List<List<String>> outputGrid) {
 		int[] maxLength = new int[ATTRIBUTES];
 		int[] padding = new int[ATTRIBUTES];
 
@@ -197,8 +187,44 @@ class CityLocalTime {
 			outputGrid.set(idx, new ArrayList<String>(paddedList));
 			paddedList.clear();
 		}
+	}
 
-		return outputGrid;
+	static private void displayOutput(Properties properties, List<List<String>> outputGrid, List<String> unfoundCities) {
+		if (Boolean.parseBoolean(properties.getProperty("unfound"))) {
+			System.out.println("These cities were not found:");
+
+			for (String city : unfoundCities) {
+				System.out.println("\t- " + city);
+			}
+			System.out.println();
+		}
+
+		System.out.println("City Times:");
+		for (List<String> city : outputGrid) {
+			System.out.print("\t| ");
+			if(Boolean.parseBoolean(properties.getProperty("location"))) System.out.print(city.get(LOCATION) + " | ");
+			if(Boolean.parseBoolean(properties.getProperty("timezone"))) System.out.print(city.get(TIMEZONE) + " | ");
+			if(Boolean.parseBoolean(properties.getProperty("date"))) System.out.print(city.get(DATE) + " | ");
+			if(Boolean.parseBoolean(properties.getProperty("time"))) System.out.print(city.get(TIME) + " | ");
+			System.out.println();
+		}
+		System.out.println();
+	}
+
+	static private boolean requestRepeatProgram(Scanner userInput) {
+		System.out.print("Would you like to enter more cities (Y/n): ");
+		while (true) {
+			String repeatFlag = userInput.nextLine();
+			switch (repeatFlag.toUpperCase()) {
+				case "Y":
+					return true;
+				case "N":
+					System.out.println("Application shutting down");
+					return false;
+				default:
+					System.out.print("Please enter Y or n: ");
+			}
+		}
 	}
 
 	static private DateTimeFormatter buildDateFormat(Properties properties) {
@@ -225,19 +251,22 @@ class CityLocalTime {
 		return DateTimeFormat.forPattern(timeFormat);
 	}
 
-	static private boolean requestRepeatProgram(Scanner userInput) {
-		System.out.print("Would you like to enter more cities (Y/n): ");
-		while (true) {
-			String repeatFlag = userInput.nextLine();
-			switch (repeatFlag.toUpperCase()) {
-				case "Y":
-					return true;
-				case "N":
-					System.out.println("Application shutting down");
-					return false;
-				default:
-					System.out.print("Please enter Y or n: ");
-			}
+	static private String cityFormatter(Properties properties, String name) {
+		String[] content = name.split(", ");
+
+		if (content.length == 3) {
+			return (
+				content[0] +
+				(Boolean.parseBoolean(properties.getProperty("province")) ? ", " + content[1] : "") +
+				(Boolean.parseBoolean(properties.getProperty("country")) ? ", " + content[2] : "")
+			);
+		} else {
+			return (
+				content[0] +
+				((Boolean.parseBoolean(properties.getProperty("province"))
+						|| Boolean.parseBoolean(properties.getProperty("country"))) ? 
+						", " + content[1] : "")
+			);
 		}
 	}
 
